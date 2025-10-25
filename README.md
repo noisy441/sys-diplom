@@ -266,21 +266,21 @@ HTTP-proxy
 Все машины обнаружились, агенты на них досnупны.
 Создадим дашборд с требуемыми графиками.
 
-![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix1.img)
+![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix1.png)
 
-![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix2.img)
+![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix2.png)
 
-![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix3.img)
+![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix3.png)
 
-![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix4.img)
+![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix4.png)
 
-![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix5.img)
+![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix5.png)
 
-![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix6.img)
+![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix6.png)
 
-![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix7.img)
+![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix7.png)
 
-![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix8.img)
+![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix8.png)
 
 Мониторинг настроен
 
