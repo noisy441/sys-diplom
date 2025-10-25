@@ -115,7 +115,7 @@ users:
     *   `sg-internal`: Разрешить всю коммуникацию внутри самой группы (для общения сервисов между собой).
     *   `sg-web`: Применить к Web-серверам. Разрешить HTTP (80/tcp) только от `sg-balancer` и `sg-zabbix` (для мониторинга).
     *   `sg-balancer`: Применить к ALB. Разрешить HTTP (80/tcp) из интернета.
-    *   `sg-zabbix`: Применить к серверу Zabbix. Разрешить входящие порты 80/tcp, 443/tcp (UI) и 10051/tcp (для агентов) из интернета и от `sg-internal`.
+    *   `sg-zabbix`: Применить к серверу Zabbix. Разрешить входящие порты 80/tcp, 443/tcp (UI) и 10051/tcp 10050/tcp (для агентов) из интернета и от `sg-internal`.
     *   `sg-elasticsearch`: Применить к Elasticsearch. Разрешить 9200/tcp только от `sg-kibana` и `sg-internal` (для Filebeat).
     *   `sg-kibana`: Применить к Kibana. Разрешить 5601/tcp из интернета.
 
