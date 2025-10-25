@@ -1,0 +1,12 @@
+---
+- name: Deploy Zabbix Server
+  hosts: monitoring
+  become: true
+  roles:
+    - zabbix-server
+
+- name: Deploy Zabbix Agents
+  hosts: all
+  become: true
+  roles:
+    - zabbix-agent

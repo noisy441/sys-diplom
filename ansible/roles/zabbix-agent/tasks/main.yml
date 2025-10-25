@@ -1,0 +1,70 @@
+---
+- name: Install prerequisites
+  become: true
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - lsb-release
+      - wget
+    state: present
+
+- name: Add Zabbix repository GPG key
+  become: true
+  ansible.builtin.apt_key:
+    url: "https://repo.zabbix.com/zabbix-official-repo.key"
+    state: present
+
+- name: Add Zabbix repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "deb https://repo.zabbix.com/zabbix/{{ zabbix_version }}/ubuntu {{ ansible_distribution_release }} main"
+    state: present
+    filename: zabbix
+    update_cache: yes
+
+- name: Install Zabbix Agent
+  become: true
+  ansible.builtin.apt:
+    name: zabbix-agent
+    state: present
+    update_cache: yes
+  notify: restart zabbix-agent
+
+- name: Ensure zabbix_agentd.conf.d directory exists
+  become: true
+  ansible.builtin.file:
+    path: /etc/zabbix/zabbix_agentd.conf.d
+    state: directory
+    owner: root
+    group: zabbix
+    mode: '0750'
+
+- name: Remove old Server and ServerActive lines
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: '^(Server|ServerActive|Hostname)='
+    state: absent
+
+- name: Configure Zabbix Agent
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    block: |
+      Server=127.0.0.1, {{ zabbix_agent_server }}
+      ServerActive=127.0.0.1, {{ zabbix_agent_serveractive }}
+      Hostname={{ zabbix_agent_hostname }}
+      HostMetadata=ubuntu
+      HostMetadataItem=system.uname
+      Timeout=30
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - ZABBIX AGENT CONFIG"
+    create: yes
+  notify: restart zabbix-agent
+
+- name: Enable and start Zabbix Agent
+  become: true
+  ansible.builtin.systemd:
+    name: zabbix-agent
+    enabled: yes
+    state: started
+  notify: restart zabbix-agent

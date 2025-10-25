@@ -1,0 +1,98 @@
+---
+- name: Install prerequisites
+  apt:
+    name:
+      - curl
+      - wget
+    state: present
+    update_cache: yes
+
+- name: Download Filebeat package
+  get_url:
+    url: "{{ filebeat_download_url }}/{{ filebeat_package_name }}"
+    dest: "/tmp/{{ filebeat_package_name }}"
+    timeout: 120
+    validate_certs: no
+
+- name: Install Filebeat
+  apt:
+    deb: "/tmp/{{ filebeat_package_name }}"
+    state: present
+
+- name: Create Filebeat log directory
+  file:
+    path: /var/log/filebeat
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Fix Filebeat configuration permissions
+  file:
+    path: /etc/filebeat/filebeat.yml
+    owner: root
+    group: root
+    mode: '0644'
+  ignore_errors: yes
+
+- name: Configure Filebeat
+  template:
+    src: filebeat.yml.j2
+    dest: /etc/filebeat/filebeat.yml
+    owner: root
+    group: root
+    mode: '0644'  # Важно: 0644 вместо 0640
+  notify: restart filebeat
+
+- name: Ensure nginx log directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /var/log/nginx
+
+- name: Create sample nginx logs
+  file:
+    path: "{{ item }}"
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - /var/log/nginx/access.log
+    - /var/log/nginx/error.log
+
+- name: Generate test log data
+  shell: |
+    echo '127.0.0.1 - - [$(date "+%d/%b/%Y:%H:%M:%S %z")] "GET / HTTP/1.1" 200 612' >> /var/log/nginx/access.log
+    echo '127.0.0.1 - - [$(date "+%d/%b/%Y:%H:%M:%S %z")] "GET /test HTTP/1.1" 404 162' >> /var/log/nginx/access.log
+    echo '$(date -Iseconds) [error] test error' >> /var/log/nginx/error.log
+  changed_when: false
+
+- name: Start and enable Filebeat service
+  systemd:
+    name: filebeat
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Wait for processing
+  pause:
+    seconds: 10
+
+- name: Verify Filebeat can read config
+  command: filebeat test config -c /etc/filebeat/filebeat.yml
+  register: config_test
+  ignore_errors: yes
+
+- name: Display config test result
+  debug:
+    msg: "Filebeat config test: {{ 'SUCCESS' if config_test.rc == 0 else 'FAILED' }}"
+
+- name: Clean up package
+  file:
+    path: "/tmp/{{ filebeat_package_name }}"
+    state: absent

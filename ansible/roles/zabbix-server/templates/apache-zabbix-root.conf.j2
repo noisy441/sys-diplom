@@ -1,0 +1,14 @@
+<VirtualHost *:80>
+    ServerName {{ ansible_fqdn | default(inventory_hostname) }}
+    DocumentRoot /usr/share/zabbix
+
+    <Directory "/usr/share/zabbix">
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+        DirectoryIndex index.php
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/zabbix_error.log
+    CustomLog ${APACHE_LOG_DIR}/zabbix_access.log combined
+</VirtualHost>

@@ -1,0 +1,127 @@
+---
+- name: Install Java
+  apt:
+    name: openjdk-17-jdk
+    state: present
+
+- name: Install dependencies
+  apt:
+    name:
+      - wget
+      - curl
+    state: present
+
+- name: Download Elasticsearch package
+  get_url:
+    url: "https://mirror.yandex.ru/mirrors/elastic/8/pool/main/e/elasticsearch/elasticsearch-8.8.0-amd64.deb"
+    dest: "/tmp/elasticsearch.deb"
+    timeout: 120
+    validate_certs: no
+
+- name: Install Elasticsearch from local package
+  apt:
+    deb: "/tmp/elasticsearch.deb"
+    state: present
+
+- name: Create Elasticsearch data directory
+  file:
+    path: /var/lib/elasticsearch
+    state: directory
+    owner: elasticsearch
+    group: elasticsearch
+    mode: '0755'
+
+- name: Create Elasticsearch logs directory
+  file:
+    path: /var/log/elasticsearch
+    state: directory
+    owner: elasticsearch
+    group: elasticsearch
+    mode: '0755'
+
+- name: Clean up existing SSL keystore configurations
+  block:
+    - name: Remove SSL password settings from keystore
+      command: /usr/share/elasticsearch/bin/elasticsearch-keystore remove xpack.security.transport.ssl.keystore.secure_password
+      args:
+        chdir: /usr/share/elasticsearch/bin/
+      ignore_errors: yes
+
+    - name: Remove SSL truststore password settings
+      command: /usr/share/elasticsearch/bin/elasticsearch-keystore remove xpack.security.transport.ssl.truststore.secure_password
+      args:
+        chdir: /usr/share/elasticsearch/bin/
+      ignore_errors: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Configure Elasticsearch
+  template:
+    src: elasticsearch.yml.j2
+    dest: /etc/elasticsearch/elasticsearch.yml
+    owner: elasticsearch
+    group: elasticsearch
+    mode: '0640'
+  notify: restart elasticsearch
+
+- name: Configure JVM options
+  template:
+    src: jvm.options.j2
+    dest: /etc/elasticsearch/jvm.options
+    owner: elasticsearch
+    group: elasticsearch
+    mode: '0644'
+  notify: restart elasticsearch
+
+- name: Set system limits for Elasticsearch
+  lineinfile:
+    path: /etc/security/limits.conf
+    line: "{{ item }}"
+    state: present
+  loop:
+    - "elasticsearch soft memlock unlimited"
+    - "elasticsearch hard memlock unlimited"
+    - "elasticsearch soft nofile 65536"
+    - "elasticsearch hard nofile 65536"
+
+- name: Configure vm.max_map_count
+  sysctl:
+    name: vm.max_map_count
+    value: 262144
+    state: present
+    reload: yes
+
+- name: Clean up Elasticsearch lock files before start
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /var/lib/elasticsearch/node.lock
+  ignore_errors: yes
+
+- name: Start and enable Elasticsearch service
+  systemd:
+    name: elasticsearch
+    state: started
+    enabled: yes
+
+- name: Wait for Elasticsearch to start
+  wait_for:
+    port: 9200
+    delay: 10
+    timeout: 120
+
+- name: Test Elasticsearch connection
+  uri:
+    url: http://localhost:9200
+    method: GET
+    status_code: 200
+    timeout: 30
+  register: es_result
+  retries: 10
+  delay: 5
+  until: es_result.status == 200
+
+- name: Clean up Elasticsearch package
+  file:
+    path: /tmp/elasticsearch.deb
+    state: absent

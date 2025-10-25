@@ -1,0 +1,46 @@
+#cloud-config
+users:
+  - name: dudin
+    groups: sudo
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys:
+    - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHGVZF4lSDylXP5qjxlriGSdGa4jrCUz9T3iA1dYJiYM noisy44@gmail.com
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - python3
+  - python3-pip
+  - curl
+  - wget
+  - htop
+
+manage_etc_hosts: true
+
+hostname: ${hostname}
+fqdn: ${hostname}.ru-central1.internal
+preserve_hostname: true
+
+runcmd:
+  - |
+    # Configure SSH
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+    sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
+    echo "AllowUsers dudin" >> /etc/ssh/sshd_config
+    systemctl restart ssh
+
+    # Setup directories and permissions
+    mkdir -p /home/dudin/.ssh
+    chmod 700 /home/dudin/.ssh
+    chown -R dudin:dudin /home/dudin/.ssh
+
+    # Ensure FQDN is set correctly
+    echo "${hostname}.ru-central1.internal" > /etc/hostname
+    hostname ${hostname}.ru-central1.internal
+
+    # Install Python for Ansible
+    apt-get update
+    apt-get install -y python3 python3-pip

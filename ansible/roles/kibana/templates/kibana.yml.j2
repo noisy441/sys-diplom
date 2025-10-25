@@ -1,0 +1,14 @@
+server.port: {{ kibana_server_port | default(5601) }}
+server.host: "{{ kibana_server_host | default('0.0.0.0') }}"
+server.name: "{{ ansible_hostname }}"
+
+# Elasticsearch без безопасности — обязательно схема http
+elasticsearch.hosts: ["{{ es_scheme | default('http') }}://{{ es_private_ip }}:9200"]
+elasticsearch.requestTimeout: 30000
+
+# Рекомендуемые ключи (не зависят от security в ES)
+xpack.security.encryptionKey: "{{ kibana_encryption_key | default('at_least_32_characters_long_key_here_12345') }}"
+xpack.encryptedSavedObjects.encryptionKey: "{{ kibana_encryption_key | default('at_least_32_characters_long_key_here_12345') | truncate(32, true, '') }}"
+xpack.reporting.encryptionKey: "{{ kibana_encryption_key | default('at_least_32_characters_long_key_here_12345') }}"
+
+xpack.reporting.kibanaServer.hostname: localhost

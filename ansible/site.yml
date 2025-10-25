@@ -1,0 +1,22 @@
+---
+- name: Deploy complete infrastructure
+  hosts: all
+  gather_facts: yes
+  become: yes
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install basic packages
+      apt:
+        name:
+          - curl
+          - wget
+        state: present
+
+- import_playbook: web.yml
+- import_playbook: monitoring.yml
+- import_playbook: elk.yml

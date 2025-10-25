@@ -1,0 +1,19 @@
+# This file is managed by Ansible. Do not edit manually.
+
+LogFile=/var/log/zabbix/zabbix_server.log
+LogFileSize=0
+PidFile=/run/zabbix/zabbix_server.pid
+
+DBHost={{ zabbix_db_host }}
+DBName={{ zabbix_db_name }}
+DBUser={{ zabbix_db_user }}
+DBPassword={{ zabbix_db_password }}
+DBPort={{ zabbix_db_port }}
+
+# Keep defaults sane; tune later if needed
+Timeout=4
+AllowRoot=0
+
+# Auto-registration settings
+HousekeepingFrequency=1
+StartDBSyncers=4

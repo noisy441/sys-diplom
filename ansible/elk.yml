@@ -1,0 +1,18 @@
+---
+- name: Configure elasticsearch
+  hosts: elk
+  become: yes
+  roles:
+    - elk
+
+- name: Configure kibana
+  hosts: kibana
+  become: true
+  roles:
+    - kibana
+
+- name: Configure filebit
+  hosts: web_servers
+  become: true
+  roles:
+    - filebeat   

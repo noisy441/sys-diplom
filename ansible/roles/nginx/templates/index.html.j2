@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>🚀 Добро пожаловать на {{ inventory_hostname }}</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --secondary-color: #FFEB3B;
+            --tertiary-color: #607D8B;
+            --background-color: #FAFAFA;
+            --font-color: #333;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            --transition-duration: 0.3s;
+            --border-radius: 12px;
+        }
+        
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: radial-gradient(circle at top left, var(--primary-color), var(--background-color));
+            color: var(--font-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Анимационные декоративные элементы */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation-name: twinkle;
+            animation-timing-function: cubic-bezier(.2,.65,.45,.95);
+            animation-iteration-count: infinite;
+            will-change: transform, opacity;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+        
+        .star:nth-child(1) { top: calc(var(--random-y)); left: calc(var(--random-x)); animation-duration: 3s; animation-delay: 0s; }
+        .star:nth-child(2) { top: calc(var(--random-y)); left: calc(var(--random-x)); animation-duration: 4s; animation-delay: 1s; }
+        .star:nth-child(3) { top: calc(var(--random-y)); left: calc(var(--random-x)); animation-duration: 5s; animation-delay: 2s; }
+        
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.8s ease-out;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(33, 150, 243, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            position: relative;
+            padding-bottom: 15px;
+        }
+        
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 80px;
+            height: 4px;
+            background: var(--primary-color);
+            border-radius: 2px;
+        }
+        
+        h2 {
+            font-size: 1.4rem;
+            color: #555;
+            margin: 25px 0 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .server-info {
+            background: #fff;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            margin: 30px 0;
+            border: 1px solid #EEF2FF;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.05);
+            transition: transform var(--transition-duration) ease;
+        }
+        
+        .server-info:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.1);
+        }
+        
+        .server-info p {
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.05rem;
+        }
+        
+        .server-info strong {
+            min-width: 120px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .status {
+            color: var(--secondary-color);
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .status::before {
+            content: '⭐';
+            color: var(--secondary-color);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.95rem;
+            color: #777;
+            padding-top: 20px;
+            border-top: 1px solid #EEE;
+            position: relative;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: #E3F2FD;
+            color: var(--primary-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Mobile Styles */
+        @media screen and (max-width: 768px) {
+            .container {
+                padding: 25px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .server-info p {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .server-info strong {
+                margin-bottom: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Декоративные звезды -->
+    <div class="stars">
+        <div class="star" style="--random-x: 50%; --random-y: 10%;" ></div>
+        <div class="star" style="--random-x: 80%; --random-y: 30%;" ></div>
+        <div class="star" style="--random-x: 20%; --random-y: 70%;" ></div>
+    </div>
+
+    <div class="container">
+        <h1>🚀 Добро пожаловать на {{ inventory_hostname }}</h1>
+        <div class="badge">
+            👨‍💻 Дипломная работа Дудина С.В.
+        </div>
+        
+        <h2>📊 Информация о сервере</h2>
+        <div class="server-info">
+            <p><strong>🖥️ Имя сервера:</strong> {{ inventory_hostname }}</p>
+            <p><strong>🌐 IP-адрес:</strong> {{ ansible_default_ipv4.address }}</p>
+            <p><strong>✅ Статус:</strong> <span class="status">Онлайн</span></p>
+            <p><strong>🕒 Часовой пояс:</strong> Europe/Moscow</p>
+        </div>
+        
+        <h2>ℹ️ О проекте</h2>
+        <p>Эта статическая страница автоматически развернута с использованием Ansible. Балансировщик нагрузки обеспечивает высокую доступность и надежность.</p>
+        
+        <footer>
+            ⚙️ Разработано с любовью и заботой • {{ ansible_date_time.date }}
+        </footer>
+    </div>
+</body>
+</html>

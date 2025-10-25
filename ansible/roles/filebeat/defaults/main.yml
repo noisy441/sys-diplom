@@ -1,0 +1,45 @@
+---
+# Filebeat version and download
+filebeat_version: "8.8.0"
+filebeat_download_url: "https://mirror.yandex.ru/mirrors/elastic/8/pool/main/f/filebeat"
+filebeat_package_name: "filebeat-{{ filebeat_version }}-amd64.deb"
+
+# Elasticsearch connection
+es_group_name: "elk"
+es_host_in_inventory: "{{ groups[es_group_name] | first }}"
+elasticsearch_host: "{{ hostvars[es_host_in_inventory].ansible_host | default(groups[es_group_name] | first) }}"
+elasticsearch_port: 9200
+elasticsearch_scheme: "http"
+
+# Filebeat settings
+filebeat_enabled: true
+filebeat_service_state: started
+filebeat_service_enabled: yes
+
+# Log inputs configuration
+filebeat_inputs:
+  nginx_access:
+    enabled: true
+    paths:
+      - /var/log/nginx/access.log
+    tags: ["nginx-access"]
+    type: filestream
+    
+  nginx_error:
+    enabled: true  
+    paths:
+      - /var/log/nginx/error.log
+    tags: ["nginx-error"]
+    type: filestream
+
+# Processors
+filebeat_processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+
+# Modules
+filebeat_setup_dashboards: false
+filebeat_setup_kibana: false
+
+# Monitoring
+filebeat_monitoring_enabled: true

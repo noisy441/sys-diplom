@@ -1,0 +1,196 @@
+- name: Download Kibana package
+  get_url:
+    url: "https://mirror.yandex.ru/mirrors/elastic/8/pool/main/k/kibana/kibana-8.8.0-amd64.deb"
+    dest: "/tmp/kibana.deb"
+    timeout: 120
+    validate_certs: no
+
+- name: Install Kibana from local package
+  apt:
+    deb: "/tmp/kibana.deb"
+    state: present
+
+- name: Create Kibana data directory
+  file:
+    path: /var/lib/kibana
+    state: directory
+    owner: kibana
+    group: kibana
+    mode: '0755'
+
+- name: Stop Kibana service before configuration
+  systemd:
+    name: kibana
+    state: stopped
+  ignore_errors: yes
+
+- name: Configure Kibana
+  template:
+    src: kibana.yml.j2
+    dest: /etc/kibana/kibana.yml
+    owner: kibana
+    group: kibana
+    mode: '0640'
+  notify: restart kibana
+
+- name: Ensure Kibana config has correct permissions
+  file:
+    path: /etc/kibana/kibana.yml
+    owner: kibana
+    group: kibana
+    mode: '0640'
+
+# Используем переменные es_scheme и es_private_ip
+- name: Compose Elasticsearch base URL
+  set_fact:
+    es_base_url: "{{ es_scheme | default('http') }}://{{ es_private_ip }}:9200"
+
+# Проверяем доступность Elasticsearch
+- name: Ensure Elasticsearch is reachable
+  uri:
+    url: "{{ es_base_url }}"
+    method: GET
+    status_code: 200
+    timeout: 10
+  register: es_ping
+  retries: 12
+  delay: 5
+  until: es_ping.status == 200
+
+# КРИТИЧЕСКИЕ НАСТРОЙКИ ДЛЯ SINGLE-NODE КЛАСТЕРА
+- name: Set cluster to allow yellow state for single-node
+  uri:
+    url: "{{ es_base_url }}/_cluster/settings"
+    method: PUT
+    headers:
+      Content-Type: "application/json"
+    body: |
+      {
+        "persistent": {
+          "cluster.routing.allocation.enable": "all",
+          "cluster.routing.allocation.disk.threshold_enabled": false
+        }
+      }
+    status_code: 200
+  ignore_errors: yes
+
+- name: Create emergency template for Kibana system indices
+  uri:
+    url: "{{ es_base_url }}/_index_template/kibana_emergency"
+    method: PUT
+    headers:
+      Content-Type: "application/json"
+    body: |
+      {
+        "index_patterns": [".kibana*", ".tasks*", ".apm*"],
+        "template": {
+          "settings": {
+            "number_of_replicas": 0,
+            "auto_expand_replicas": "0-all"
+          }
+        },
+        "priority": 10000,
+        "composed_of": []
+      }
+    status_code: 200
+  ignore_errors: yes
+
+- name: Apply zero replicas to all existing indices
+  uri:
+    url: "{{ es_base_url }}/_all/_settings"
+    method: PUT
+    headers:
+      Content-Type: "application/json"
+    body: |
+      {
+        "index": {
+          "number_of_replicas": 0
+        }
+      }
+    status_code: [200, 404]
+  ignore_errors: yes
+
+- name: Wait for stable cluster state
+  uri:
+    url: "{{ es_base_url }}/_cluster/health"
+    method: GET
+    status_code: 200
+  register: cluster_state
+  retries: 10
+  delay: 5
+  until: cluster_state.json.status == 'green' or cluster_state.json.status == 'yellow'
+  ignore_errors: yes
+
+- name: Display cluster health status
+  debug:
+    msg: "Elasticsearch cluster status: {{ cluster_state.json.status }}"
+
+# ЗАПУСК KIBANA
+- name: Start and enable Kibana service
+  systemd:
+    name: kibana
+    state: started
+    enabled: yes
+
+# ДАЕМ KIBANA БОЛЬШЕ ВРЕМЕНИ ДЛЯ ИНИЦИАЛИЗАЦИИ
+- name: Wait for Kibana port to be available
+  wait_for:
+    port: 5601
+    host: 0.0.0.0
+    delay: 30
+    timeout: 300
+
+- name: Wait for Kibana API to be ready
+  uri:
+    url: http://localhost:5601/api/status
+    method: GET
+    status_code: 200
+    timeout: 60
+  register: kibana_api_status
+  retries: 25
+  delay: 10
+  until: kibana_api_status.status == 200
+  ignore_errors: yes
+
+- name: Check Kibana service status after initialization
+  command: systemctl status kibana
+  register: kibana_status
+  ignore_errors: yes
+
+- name: Display Kibana service status
+  debug:
+    var: kibana_status.stdout
+
+- name: Check recent Kibana logs for errors
+  command: journalctl -u kibana -n 30 --no-pager
+  register: kibana_logs
+  ignore_errors: yes
+
+- name: Display recent Kibana logs
+  debug:
+    var: kibana_logs.stdout
+
+- name: Final Kibana connection test
+  uri:
+    url: http://localhost:5601
+    method: GET
+    status_code: 200, 302
+    timeout: 30
+  register: kibana_final_test
+  retries: 5
+  delay: 10
+
+- name: Display success message if Kibana is ready
+  debug:
+    msg: "Kibana is now ready and accessible at http://{{ ansible_host }}:5601"
+  when: kibana_final_test.status == 200 or kibana_final_test.status == 302
+
+- name: Display warning message if Kibana is not ready
+  debug:
+    msg: "Kibana is running but API is not fully ready. Check logs for details."
+  when: kibana_final_test.status != 200 and kibana_final_test.status != 302
+
+- name: Clean up Kibana package
+  file:
+    path: "/tmp/kibana.deb"
+    state: absent

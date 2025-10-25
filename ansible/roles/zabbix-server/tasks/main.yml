@@ -1,0 +1,276 @@
+---
+- name: Install prerequisites
+  become: true
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - ca-certificates
+      - python3-psycopg2
+      - acl
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Add Zabbix official APT repository
+  become: true
+  ansible.builtin.apt:
+    deb: "{{ zabbix_release_deb_url }}"
+    state: present
+
+- name: Update APT cache after adding Zabbix repo
+  become: true
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Install Zabbix server, PostgreSQL, Apache, PHP and dependencies
+  become: true
+  ansible.builtin.apt:
+    name: "{{ zabbix_packages }}"
+    state: present
+
+- name: Ensure PostgreSQL is running and enabled
+  become: true
+  ansible.builtin.systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+# pg_hba со SCRAM на IPv4 и IPv6
+- name: Allow zabbix user from localhost IPv4
+  become: true
+  community.postgresql.postgresql_pg_hba:
+    dest: "{{ pg_hba_path }}"
+    contype: host
+    databases: all
+    users: "{{ zabbix_db_user }}"
+    address: 127.0.0.1/32
+    method: scram-sha-256
+  notify: restart postgresql
+
+- name: Allow zabbix user from localhost IPv6
+  become: true
+  community.postgresql.postgresql_pg_hba:
+    dest: "{{ pg_hba_path }}"
+    contype: host
+    databases: all
+    users: "{{ zabbix_db_user }}"
+    address: ::1/128
+    method: scram-sha-256
+  notify: restart postgresql
+
+# Пользователь БД и база данных (идемпотентные)
+- name: Ensure Zabbix database user exists
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: "{{ zabbix_db_user }}"
+    password: "{{ zabbix_db_password }}"
+    role_attr_flags: LOGIN
+    state: present
+  no_log: true
+
+- name: Ensure Zabbix database exists
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    name: "{{ zabbix_db_name }}"
+    owner: "{{ zabbix_db_user }}"
+    state: present
+
+# Импортирт схему только в том случае, если она еще не импортирована
+- name: Check if Zabbix schema is imported (look for 'dbversion' table)
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_query:
+    login_db: "{{ zabbix_db_name }}"
+    query: "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='dbversion';"
+  register: zbx_schema_check
+  ignore_errors: yes
+
+- name: Import initial Zabbix schema
+  become: true
+  become_user: postgres
+  ansible.builtin.shell: |
+    set -euo pipefail
+    zcat /usr/share/zabbix-sql-scripts/postgresql/server.sql.gz | psql -v ON_ERROR_STOP=1 "{{ zabbix_db_name }}"
+  args:
+    executable: /bin/bash
+  when: (zbx_schema_check.queries[0].rowcount | default(0)) == 0
+  notify: restart zabbix-server
+
+- name: Grant all privileges on Zabbix database to zabbix user
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_query:
+    login_db: "{{ zabbix_db_name }}"
+    query: "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {{ zabbix_db_user }};"
+  ignore_errors: yes
+
+- name: Grant all privileges on sequences in Zabbix database to zabbix user
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_query:
+    login_db: "{{ zabbix_db_name }}"
+    query: "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {{ zabbix_db_user }};"
+  ignore_errors: yes
+
+- name: Grant all privileges on schema in Zabbix database to zabbix user
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_query:
+    login_db: "{{ zabbix_db_name }}"
+    query: "GRANT ALL PRIVILEGES ON SCHEMA public TO {{ zabbix_db_user }};"
+  ignore_errors: yes
+
+# Настройка zabbix_server.conf с помощью шаблона
+- name: Render zabbix_server.conf
+  become: true
+  ansible.builtin.template:
+    src: zabbix_server.conf.j2
+    dest: /etc/zabbix/zabbix_server.conf
+    owner: root
+    group: zabbix
+    mode: '0640'
+  notify: restart zabbix-server
+  no_log: true
+
+# Проверка, что существуют необходимые каталоги
+- name: Ensure /run/zabbix directory exists
+  become: true
+  ansible.builtin.file:
+    path: /run/zabbix
+    state: directory
+    owner: zabbix
+    group: zabbix
+    mode: '0755'
+
+- name: Configure tmpfiles.d for /run/zabbix
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/tmpfiles.d/zabbix.conf
+    content: |
+      d /run/zabbix 0755 zabbix zabbix -
+    mode: '0644'
+
+- name: Ensure /var/log/zabbix directory exists
+  become: true
+  ansible.builtin.file:
+    path: /var/log/zabbix
+    state: directory
+    owner: zabbix
+    group: zabbix
+    mode: '0750'
+
+- name: Ensure zabbix_server.conf.d directory exists
+  become: true
+  ansible.builtin.file:
+    path: /etc/zabbix/zabbix_server.conf.d
+    state: directory
+    owner: root
+    group: zabbix
+    mode: '0750'
+
+- name: Ensure zabbix_server.log file exists
+  become: true
+  ansible.builtin.file:
+    path: /var/log/zabbix/zabbix_server.log
+    state: touch
+    owner: zabbix
+    group: zabbix
+    mode: '0644'
+
+- name: Reload systemd to apply changes
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Check if zabbix_server.conf exists and is readable
+  become: true
+  ansible.builtin.stat:
+    path: /etc/zabbix/zabbix_server.conf
+  register: zbx_conf_stat
+
+- name: Fail if zabbix_server.conf is not readable
+  ansible.builtin.fail:
+    msg: "Zabbix server configuration file is not readable"
+  when: not zbx_conf_stat.stat.exists or not zbx_conf_stat.stat.readable
+
+# Часовой пояс PHP для Apache SAPI
+- name: Set PHP timezone
+  become: true
+  ansible.builtin.ini_file:
+    path: "/etc/php/{{ php_version }}/apache2/php.ini"
+    section: Date
+    option: date.timezone
+    value: "{{ php_timezone }}"
+    no_extra_spaces: true
+  notify: restart apache2
+
+# Apache vhost для Zabbix root
+- name: Deploy custom Apache config for Zabbix root
+  become: true
+  ansible.builtin.template:
+    src: apache-zabbix-root.conf.j2
+    dest: /etc/apache2/sites-available/zabbix-root.conf
+    mode: '0644'
+  notify: restart apache2
+
+- name: Enable Zabbix root configuration
+  become: true
+  ansible.builtin.file:
+    src: /etc/apache2/sites-available/zabbix-root.conf
+    dest: /etc/apache2/sites-enabled/zabbix-root.conf
+    state: link
+  notify: restart apache2
+
+# Убираем дефолтный пакетный конфиг Zabbix в Apache
+- name: Disable default Zabbix Apache conf
+  become: true
+  ansible.builtin.file:
+    path: /etc/apache2/conf-enabled/zabbix.conf
+    state: absent
+  notify: restart apache2
+
+- name: Enable Apache rewrite module
+  become: true
+  ansible.builtin.apache2_module:
+    name: rewrite
+    state: present
+  notify: restart apache2
+
+- name: Ensure Zabbix frontend directory exists
+  become: true
+  ansible.builtin.file:
+    path: /usr/share/zabbix
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Deploy Zabbix Apache configuration
+  become: true
+  ansible.builtin.template:
+    src: zabbix-apache.conf.j2
+    dest: /etc/apache2/conf-available/zabbix.conf
+    mode: '0644'
+  notify: restart apache2
+
+- name: Enable Zabbix Apache configuration
+  become: true
+  ansible.builtin.file:
+    src: /etc/apache2/conf-available/zabbix.conf
+    dest: /etc/apache2/conf-enabled/zabbix.conf
+    state: link
+  notify: restart apache2
+
+# Старт сервисов после БД и конфигов
+- name: Enable and start services
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  loop:
+    - apache2
+    - zabbix-agent
+    - zabbix-server

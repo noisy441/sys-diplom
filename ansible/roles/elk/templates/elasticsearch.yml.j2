@@ -1,0 +1,19 @@
+# Базовая конфигурация Elasticsearch
+cluster.name: "{{ elasticsearch_cluster_name }}"
+node.name: "{{ ansible_hostname }}"
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+network.host: 0.0.0.0
+http.port: 9200
+discovery.type: single-node
+
+# Настройки безопасности - DISABLED для разработки 
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+
+# Явно отключаем SSL, чтобы избежать конфликтов с хранилищем ключей
+xpack.security.transport.ssl.enabled: false
+xpack.security.http.ssl.enabled: false
+
+# Дополнительные настройки для предотвращения автоматической настройки
+xpack.security.autoconfiguration.enabled: false

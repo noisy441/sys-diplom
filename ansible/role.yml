@@ -1,0 +1,38 @@
+#Установка на Управляющий localhost коллекции плэйбуков
+---
+- name: install galaxy roles and collection
+  hosts: localhost
+  become: yes
+  become_user: dudin
+
+  tasks:
+    - name: install geerlingguy.nginx
+      community.general.ansible_galaxy_install:
+        type: role
+        name: geerlingguy.nginx
+
+    - name: install geerlingguy.apache
+      community.general.ansible_galaxy_install:
+        type: role
+        name: geerlingguy.apache
+
+    - name: install geerlingguy.php
+      community.general.ansible_galaxy_install:
+        type: role
+        name: geerlingguy.php
+
+    - name: install zabbix
+      community.general.ansible_galaxy_install:
+        type: collection
+        name: community.zabbix
+
+    - name: install postgresql
+      community.general.ansible_galaxy_install:
+        type: collection
+        name: community.postgresql
+
+    - name: install community general collection
+      community.general.ansible_galaxy_install:
+        type: collection
+        name: community.general
+

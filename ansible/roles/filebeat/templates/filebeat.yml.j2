@@ -1,0 +1,37 @@
+# Filebeat configuration
+filebeat.inputs:
+- type: filestream
+  enabled: true
+  paths:
+    - /var/log/nginx/access.log
+  tags: ["nginx-access"]
+
+- type: filestream
+  enabled: true
+  paths:
+    - /var/log/nginx/error.log
+  tags: ["nginx-error"]
+
+# Output
+output.elasticsearch:
+  hosts: ["{{ elasticsearch_scheme }}://{{ elasticsearch_host }}:{{ elasticsearch_port }}"]
+  index: "filebeat-%{+yyyy.MM.dd}"
+
+# Index setup
+setup.template:
+  name: "filebeat"
+  pattern: "filebeat-*"
+  enabled: true
+
+setup.ilm:
+  enabled: false
+
+setup.dashboards.enabled: false
+
+# Logging
+logging:
+  level: info
+  to_files: true
+  files:
+    path: /var/log/filebeat
+    name: filebeat.log
