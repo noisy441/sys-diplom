@@ -226,10 +226,10 @@ HTTP-proxy
 
 Проверим с помощью команды curl -v <публичный IP балансера>:80
 Первое выполнение
-![web-1](https://github.com/noisy441/sys-diplom/blob/main/img/curl1.img)
+![web-1](https://github.com/noisy441/sys-diplom/blob/main/img/curl1.png)
 
 Второе выполнение
-![web-2](https://github.com/noisy441/sys-diplom/blob/main/img/curl2.img)
+![web-2](https://github.com/noisy441/sys-diplom/blob/main/img/curl2.png)
 
 ### Этап 4: Внедрение мониторинга (Zabbix + Ansible)
 
