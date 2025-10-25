@@ -266,7 +266,7 @@ HTTP-proxy
 Все машины обнаружились, агенты на них досnупны.
 Создадим дашборд с требуемыми графиками.
 
-![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix1.png)
+![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix.png)
 
 ![zabbix](https://github.com/noisy441/sys-diplom/blob/main/img/zabbix2.png)
 
