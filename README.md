@@ -47,7 +47,7 @@ provider_installation {
 ```
 Создадим в Yandex Cloud сервисный аккаунт с правами editor и скопируем полученный ключ в ```~/.authorized_key.json"```
 
-Создадим в корне проекта файлы providers.tf и variables.tf в котором будем хранить наши переменные. Поверим работу командой 
+Создадим в корне проекта файлы [providers.tf](providers.tf) и [variables.tf](variables.tf) в котором будем хранить наши переменные. Поверим работу командой 
 ```
 terrafirm init
 ```
@@ -62,7 +62,7 @@ terrafirm init
 >
 >Terraform has been successfully initialized!
 
-Сразу же создадим в корне файл ````.gitignore``` он понадобится для ограничения публикации в git.
+Сразу же создадим в корне файл [gitignore](.gitignore) он понадобится для ограничения публикации в git.
 
 Terraform установлен и готов к работе. 
 
@@ -108,7 +108,7 @@ users:
         *   Для `public-subnet-a`: маршрут по умолчанию (`0.0.0.0/0`) на `internet-gateway`.
         *   Для приватных подсетей: маршрут по умолчанию (`0.0.0.0/0`) на `nat-gateway`.
 
-Для реализации этой задачи создадим файл network.tf в котором опишем создание намеченной сетевой инфраструктуры. Разделим конфигурацию на логические блоки. Начнем с создания основной VPC сети с названием "main-network"  далее создадим шлюзы, таблицы маршрутизации и подсети.
+Для реализации этой задачи создадим файл [network.tf](network.tf) в котором опишем создание намеченной сетевой инфраструктуры. Разделим конфигурацию на логические блоки. Начнем с создания основной VPC сети с названием "main-network"  далее создадим шлюзы, таблицы маршрутизации и подсети.
 
 2.  **Настройка Security Groups:**
     *   `sg-bastion`: Разрешить входящий SSH (22/tcp) только с моего IP.
@@ -119,7 +119,7 @@ users:
     *   `sg-elasticsearch`: Применить к Elasticsearch. Разрешить 9200/tcp только от `sg-kibana` и `sg-internal` (для Filebeat).
     *   `sg-kibana`: Применить к Kibana. Разрешить 5601/tcp из интернета.
 
-Для создания групп безопастности создадим отдельный файл security_groups.tf в котором и опишем конфигурацию. Проверим  работоспособность конфигурации.
+Для создания групп безопастности создадим отдельный файл [security_groups .tf](security_groups .tf) в котором и опишем конфигурацию. Проверим  работоспособность конфигурации.
 Выполним команты
 ```
 terraform plan
@@ -143,7 +143,7 @@ terraform destroy
     *   `kibana`: В `public-subnet-a`, с публичным IP.
     *   Для всех ВМ указать SSH-ключ для доступа.
 
-Создадим файл instance.tf в нем опишем виртуальные машины, которые планируем разворачивать в соответствии с планом и укажем в каких подсетях они будут работать. Буду создавать прерываемые машины с 2 Гб оперативной памяти и 2 ядрами процессора. Для авторизации буду использовать логин dudin и свой SSH ключ.
+Создадим файл [instance.tf](instance.tf) в нем опишем виртуальные машины, которые планируем разворачивать в соответствии с планом и укажем в каких подсетях они будут работать. Буду создавать прерываемые машины с 2 Гб оперативной памяти и 2 ядрами процессора. Для авторизации буду использовать логин dudin и свой SSH ключ.
 
 2.  **Создание балансировщика нагрузки (ALB):**
     *   **Target Group:** Включить `web-1` и `web-2` по FQDN (`web-1.ru-central1.internal`, `web-2.ru-central1.internal`).
@@ -167,7 +167,7 @@ terraform destroy
     port              = 30080  
   }
 ```
-predefined_target = "loadbalancer_healthchecks" автоматически разрешает все необходимые IP-диапазоны для Health Check от Yandex Cloud. После добавления этого блока, балансировщик был успешно создан. Осталось добавить в файл outputs.tf несколько строк для вывода информации о созданном балансировщике. 
+predefined_target = "loadbalancer_healthchecks" автоматически разрешает все необходимые IP-диапазоны для Health Check от Yandex Cloud. После добавления этого блока, балансировщик был успешно создан. Осталось добавить в файл [outputs.tf](outputs.tf) несколько строк для вывода информации о созданном балансировщике. 
 
 Наглядно посмотрим на получившуюся инфраструктуру:
 Dashboard Yandex Cloud
@@ -307,17 +307,17 @@ HTTP-proxy
 Объединим запуск ролей в один файл [elk.yml](ansible/elk.yml) и закрепим запуск в файле [site.yml](ansible/site.yml) таким образом мы сможем запускать офин файл для разворачивания всего проекта. Установим Elasticsearch, Kibana и Filebeat
 
 
-![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic0.img)
+![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic0.png)
 
-![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic1.img)
+![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic1.png)
 
-![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic2.img)
+![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic2.png)
 
-![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic3.img)
+![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic3.png)
 
-![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic4.img)
+![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic4.png)
 
-![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic5.img)
+![elastic](https://github.com/noisy441/sys-diplom/blob/main/img/elastic5.png)
 
 Сбор логов и их визуализация настроены. 
 
@@ -337,6 +337,14 @@ Snapshot
 ### ИТОГИ
 
 Работа выполнена. 
+Весь проект может быть развернут с помощью нескольких команд
+
+```
+terraforn apply # Для развертывания инфраструктуры
+cd ansible/
+ansible all -m ping #для предварительного установления связи со всеми машинами
+ansible-playbook site.yml # Для установки и настройки программнрого обеспечения
+```
 
 ## Сайт доступен по адресу http://158.160.188.68/
 
